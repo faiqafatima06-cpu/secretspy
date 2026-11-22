@@ -59,7 +59,7 @@
   <div class="app">
     <!-- SCREEN 1: LOGIN -->
     <div id="screen-login">
-      <div style="text-align:center;"><span class="badge">🕵️ LIVE VOICE + MULTIPLAYER v4</span></div>
+      <div style="text-align:center;"><span class="badge">🕵️ LIVE VOICE + MULTIPLAYER v5</span></div>
       <h1>Secret Spy</h1>
       <p style="text-align:center; color:#94a3b8; font-size:14px;">
         Play with friends or random players online, give voice hints, and catch the Spy!
@@ -77,7 +77,7 @@
       <h2>Game Lobby</h2>
 
       <button type="button" class="secondary" onclick="doQuickMatch()">🌍 Quick Play (Random Match)</button>
-      <button type="button" onclick="doCreateRoom()">🏠 Create Private Room</button>
+      <button type="button" id="createBtn" onclick="doCreateRoom()">🏠 Create Private Room</button>
 
       <div style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
         <input type="text" id="joinCodeInput" placeholder="Enter Room Code (e.g. SPY420)" />
@@ -126,7 +126,7 @@
     </div>
   </div>
 
-  <!-- 1. CORE UI SCRIPT (Loads First - Never Blocked) -->
+  <!-- 1. CORE UI SCRIPT -->
   <script>
     var currentUser = { name: "", id: "", uid: "" };
     var currentRoomCode = "";
@@ -189,7 +189,7 @@
     }
   </script>
 
-  <!-- 2. FIREBASE & ZEGOCLOUD SCRIPTS (Loaded Safely at Bottom) -->
+  <!-- 2. FIREBASE & ZEGOCLOUD SCRIPTS -->
   <script src="https://unpkg.com"></script>
   <script src="https://gstatic.com"></script>
   <script src="https://gstatic.com"></script>
@@ -210,14 +210,19 @@
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
     } catch (e) {
-      console.log("Firebase note:", e);
+      alert("Firebase init failed: " + e.message);
     }
 
     var ZEGO_APP_ID = 601093113;
     var ZEGO_SERVER_SECRET = "411349c1f9f6eef09cc83a47d6338fee";
 
     function doCreateRoom() {
-      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+      if (!db) {
+        alert("Database not loaded! Please refresh the page and check internet.");
+        return;
+      }
+      var btn = document.getElementById("createBtn");
+      btn.innerText = "Creating Room...";
       var code = "SPY" + Math.floor(100 + Math.random() * 900);
       db.ref("rooms/" + code).set({
         code: code,
@@ -226,22 +231,27 @@
         word: "",
         spyUid: ""
       }).then(function() {
+        btn.innerText = "🏠 Create Private Room";
         joinRoom(code);
+      }).catch(function(err) {
+        btn.innerText = "🏠 Create Private Room";
+        alert("Error creating room: " + err.message);
       });
     }
 
     function doJoinCode() {
-      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+      if (!db) return alert("Database not loaded!");
       var code = document.getElementById("joinCodeInput").value.trim().toUpperCase();
       if (!code) return alert("Please enter a valid Room Code!");
-      db.ref("rooms/" + code).once("value").then(function(snap) {
-        if (!snap.exists()) return alert("❌ Room code not found!");
-        joinRoom(code);
-      });
-    }
-
-    function doQuickMatch() {
-      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+db.ref("rooms/" + code).once("value").then(function(snap) {
+if (!snap.exists()) return alert("❌ Room code not found!");
+joinRoom(code);
+}).catch(function(err) {
+alert("Error joining room: " + err.message);
+});
+}
+function doQuickMatch() {
+if (!db) return alert("Database not loaded!");
 db.ref("rooms").once("value").then(function(snap) {
 var foundCode = null;
 if (snap.exists()) {
@@ -265,10 +275,14 @@ word: "",
 spyUid: ""
 }).then(function() {
 joinRoom(foundCode);
+}).catch(function(err) {
+alert("Quick match error: " + err.message);
 });
 } else {
 joinRoom(foundCode);
 }
+}).catch(function(err) {
+alert("Quick match error: " + err.message);
 });
 }
 function joinRoom(code) {
@@ -284,6 +298,8 @@ playerRef.onDisconnect().remove();
 startVoiceChat(code);
 listenToRoom(code);
 showScreen("screen-room");
+}).catch(function(err) {
+alert("Join player error: " + err.message);
 });
 }
 function startVoiceChat(roomID) {
