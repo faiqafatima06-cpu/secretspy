@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Secret Spy - Live Multiplayer & Voice</title>
-  <script src="https://unpkg.com"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
     body {
@@ -27,9 +26,7 @@
     input { background: #0f172a; color: #fff; border: 1px solid #334155; }
     button {
       background: #6366f1; color: white; font-weight: bold; cursor: pointer;
-      transition: 0.2s;
     }
-    button:hover { background: #4f46e5; }
     button.secondary { background: #10b981; }
     button.danger { background: #ef4444; }
     button.outline { background: transparent; border: 1px solid #475569; }
@@ -62,13 +59,13 @@
   <div class="app">
     <!-- SCREEN 1: LOGIN -->
     <div id="screen-login">
-      <div style="text-align:center;"><span class="badge">🕵️ LIVE VOICE + MULTIPLAYER</span></div>
+      <div style="text-align:center;"><span class="badge">🕵️ LIVE VOICE + MULTIPLAYER v4</span></div>
       <h1>Secret Spy</h1>
       <p style="text-align:center; color:#94a3b8; font-size:14px;">
         Play with friends or random players online, give voice hints, and catch the Spy!
       </p>
       <input type="text" id="usernameInput" placeholder="Enter your username (e.g. Sara)" />
-      <button id="continueBtn" onclick="handleLogin()">Continue 🚀</button>
+      <button type="button" onclick="doLogin()">Continue 🚀</button>
     </div>
 
     <!-- SCREEN 2: LOBBY -->
@@ -79,12 +76,12 @@
       </div>
       <h2>Game Lobby</h2>
 
-      <button class="secondary" onclick="handleQuickMatch()">🌍 Quick Play (Random Match)</button>
-      <button onclick="handleCreateRoom()">🏠 Create Private Room</button>
+      <button type="button" class="secondary" onclick="doQuickMatch()">🌍 Quick Play (Random Match)</button>
+      <button type="button" onclick="doCreateRoom()">🏠 Create Private Room</button>
 
       <div style="margin-top:12px; border-top:1px solid #334155; padding-top:12px;">
         <input type="text" id="joinCodeInput" placeholder="Enter Room Code (e.g. SPY420)" />
-        <button class="outline" onclick="handleJoinCode()">🔑 Join with Code</button>
+        <button type="button" class="outline" onclick="doJoinCode()">🔑 Join with Code</button>
       </div>
 
       <div style="margin-top:14px;">
@@ -97,20 +94,17 @@
     <div id="screen-room" class="hidden">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span class="badge" id="roomCodeDisplay">Room: ---</span>
-        <button class="small-btn outline" onclick="handleCopyInvite()">📋 Copy Invite</button>
+        <button type="button" class="small-btn outline" onclick="doCopyInvite()">📋 Copy Invite</button>
       </div>
 
-      <!-- Live Voice Chat Widget -->
       <div id="voice-container"></div>
 
-      <!-- Waiting Area -->
       <div id="waiting-section">
         <h3 style="font-size:16px;">Players in Room (Min 2 to Start)</h3>
         <div id="roomPlayersList"></div>
-        <button class="secondary" onclick="startNewRound()">🎮 Start Game</button>
+        <button type="button" class="secondary" onclick="doStartGame()">🎮 Start Game</button>
       </div>
 
-      <!-- Active Game Area -->
       <div id="game-section" class="hidden">
         <div class="word-box">
           <div style="font-size:12px; opacity:0.9;">Your Secret Word Is:</div>
@@ -119,63 +113,41 @@
         </div>
         <h3 style="font-size:14px; text-align:left;">🗳️ Who is the Spy? (Cast Your Vote)</h3>
         <div id="votePlayersList"></div>
-        <button class="outline" onclick="startNewRound()">🔄 Next Round</button>
+        <button type="button" class="outline" onclick="doStartGame()">🔄 Next Round</button>
       </div>
 
-      <!-- Live Room Text Chat -->
       <div class="chat-box" id="chatBox"></div>
       <div class="chat-input-row">
         <input type="text" id="chatInput" placeholder="Type a hint or message..." />
-        <button onclick="handleSendChat()">Send</button>
+        <button type="button" onclick="doSendChat()">Send</button>
       </div>
 
-      <button class="danger" style="margin-top:10px;" onclick="handleLeaveRoom()">🚪 Leave Room</button>
+      <button type="button" class="danger" style="margin-top:10px;" onclick="doLeaveRoom()">🚪 Leave Room</button>
     </div>
   </div>
 
-  <!-- Firebase Compat SDK -->
-  <script src="https://gstatic.com"></script>
-  <script src="https://gstatic.com"></script>
-
+  <!-- 1. CORE UI SCRIPT (Loads First - Never Blocked) -->
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCZdsngz77rDveN_b4QOkR6JP2W5hmMXK4",
-      authDomain: "://firebaseapp.com",
-      databaseURL: "https://firebaseio.com",
-      projectId: "secret-spy-548c8",
-      storageBucket: "secret-spy-548c8.firebasestorage.app",
-      messagingSenderId: "41267848411",
-      appId: "1:41267848411:web:ba2990fa576551b407d8fe",
-      measurementId: "G-9HFNH5HP6P"
-    };
-
-    let db = null;
-    try {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-    } catch (err) {
-      alert("Firebase init error: " + err.message);
-    }
-
-    const ZEGO_APP_ID = 601093113;
-    const ZEGO_SERVER_SECRET = "411349c1f9f6eef09cc83a47d6338fee";
-
-    const WORDS = ["Pizza", "Airplane", "Coffee", "Football", "Beach", "Cinema", "Smartphone", "Hospital", "Library", "Rain", "Chocolate", "Bicycle"];
-    let currentUser = { name: "", id: "", uid: "" };
-    let currentRoomCode = "";
-    let zegoInstance = null;
+    var currentUser = { name: "", id: "", uid: "" };
+    var currentRoomCode = "";
+    var zegoInstance = null;
+    var db = null;
+    var WORDS = ["Pizza", "Airplane", "Coffee", "Football", "Beach", "Cinema", "Smartphone", "Hospital", "Library", "Rain", "Chocolate", "Bicycle"];
 
     function showScreen(id) {
-      ["screen-login", "screen-lobby", "screen-room"].forEach(s => {
-        document.getElementById(s).classList.add("hidden");
-      });
+      document.getElementById("screen-login").classList.add("hidden");
+      document.getElementById("screen-lobby").classList.add("hidden");
+      document.getElementById("screen-room").classList.add("hidden");
       document.getElementById(id).classList.remove("hidden");
     }
 
-    function handleLogin() {
-      const name = document.getElementById("usernameInput").value.trim();
-      if (!name) return alert("Please enter your username first!");
-      const numId = Math.floor(1000 + Math.random() * 9000);
+    function doLogin() {
+      var name = document.getElementById("usernameInput").value.trim();
+      if (!name) {
+        alert("Please enter your username first!");
+        return;
+      }
+      var numId = Math.floor(1000 + Math.random() * 9000);
       currentUser = {
         name: name,
         id: "#" + numId,
@@ -187,81 +159,142 @@
       showScreen("screen-lobby");
     }
 
-    async function handleCreateRoom() {
-      if (!db) return alert("Database not connected!");
-      const code = "SPY" + Math.floor(100 + Math.random() * 900);
-      await db.ref("rooms/" + code).set({
+    function renderFriends() {
+      var friends = JSON.parse(localStorage.getItem("spy_friends") || "[]");
+      var box = document.getElementById("friendsList");
+      if (friends.length === 0) {
+        box.innerHTML = '<p style="color:#64748b; font-size:13px;">No saved friends yet. Click "+ Add Friend" inside a room!</p>';
+        return;
+      }
+      box.innerHTML = "";
+      friends.forEach(function(f) {
+        box.innerHTML += '<div class="player-card"><span>🟢 ' + f.name + ' (' + f.id + ')</span><button type="button" class="small-btn" onclick="doCreateRoom()">New Room</button></div>';
+      });
+    }
+
+    function saveFriend(name, id) {
+      var friends = JSON.parse(localStorage.getItem("spy_friends") || "[]");
+      if (!friends.some(function(f) { return f.id === id; })) {
+        friends.push({ name: name, id: id });
+        localStorage.setItem("spy_friends", JSON.stringify(friends));
+        alert("✅ " + name + " added to Friends List!");
+        renderFriends();
+      }
+    }
+
+    function doCopyInvite() {
+      var text = "Join my Secret Spy game room! Room Code: " + currentRoomCode;
+      if (navigator.clipboard) navigator.clipboard.writeText(text);
+      alert("Invite copied! Share with friends:\n\n" + text);
+    }
+  </script>
+
+  <!-- 2. FIREBASE & ZEGOCLOUD SCRIPTS (Loaded Safely at Bottom) -->
+  <script src="https://unpkg.com"></script>
+  <script src="https://gstatic.com"></script>
+  <script src="https://gstatic.com"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyCZdsngz77rDveN_b4QOkR6JP2W5hmMXK4",
+      authDomain: "://firebaseapp.com",
+      databaseURL: "https://firebaseio.com",
+      projectId: "secret-spy-548c8",
+      storageBucket: "secret-spy-548c8.firebasestorage.app",
+      messagingSenderId: "41267848411",
+      appId: "1:41267848411:web:ba2990fa576551b407d8fe",
+      measurementId: "G-9HFNH5HP6P"
+    };
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+    } catch (e) {
+      console.log("Firebase note:", e);
+    }
+
+    var ZEGO_APP_ID = 601093113;
+    var ZEGO_SERVER_SECRET = "411349c1f9f6eef09cc83a47d6338fee";
+
+    function doCreateRoom() {
+      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+      var code = "SPY" + Math.floor(100 + Math.random() * 900);
+      db.ref("rooms/" + code).set({
         code: code,
         isPublic: false,
         status: "waiting",
         word: "",
         spyUid: ""
+      }).then(function() {
+        joinRoom(code);
       });
-      joinRoom(code);
     }
 
-    async function handleJoinCode() {
-      const code = document.getElementById("joinCodeInput").value.trim().toUpperCase();
+    function doJoinCode() {
+      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+      var code = document.getElementById("joinCodeInput").value.trim().toUpperCase();
       if (!code) return alert("Please enter a valid Room Code!");
-      const snap = await db.ref("rooms/" + code).once("value");
-      if (!snap.exists()) return alert("❌ Room code not found!");
-      joinRoom(code);
-    }
-
-    async function handleQuickMatch() {
-      const snap = await db.ref("rooms").once("value");
-      let foundCode = null;
-      if (snap.exists()) {
-        const rooms = snap.val();
-        for (const k in rooms) {
-          const r = rooms[k];
-          const pCount = r.players ? Object.keys(r.players).length : 0;
-          if (r.isPublic && r.status === "waiting" && pCount < 6) {
-            foundCode = k;
-            break;
-          }
-        }
-      }
-      if (!foundCode) {
-        foundCode = "PUB" + Math.floor(100 + Math.random() * 900);
-        await db.ref("rooms/" + foundCode).set({
-          code: foundCode,
-          isPublic: true,
-          status: "waiting",
-          word: "",
-          spyUid: ""
-        });
-      }
-      joinRoom(foundCode);
-    }
-
-    async function joinRoom(code) {
-      currentRoomCode = code;
-      document.getElementById("roomCodeDisplay").innerText = "Room: " + code;
-
-      const playerRef = db.ref("rooms/" + code + "/players/" + currentUser.uid);
-      await playerRef.set({
-        name: currentUser.name,
-        id: currentUser.id,
-        uid: currentUser.uid
+      db.ref("rooms/" + code).once("value").then(function(snap) {
+        if (!snap.exists()) return alert("❌ Room code not found!");
+        joinRoom(code);
       });
-      playerRef.onDisconnect().remove();
-
-      startVoiceChat(code);
-      listenToRoom(code);
-      showScreen("screen-room");
     }
 
-    function startVoiceChat(roomID) {
-      try {
-        if (typeof ZegoUIKitPrebuilt !== "undefined") {
-          const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-            ZEGO_APP_ID,
-            ZEGO_SERVER_SECRET,
-            roomID,
-            currentUser.uid,
-            currentUser.name
-Use code with caution.
+    function doQuickMatch() {
+      if (!db) return alert("Connecting to server, please wait 2 seconds and try again!");
+db.ref("rooms").once("value").then(function(snap) {
+var foundCode = null;
+if (snap.exists()) {
+var rooms = snap.val();
+for (var k in rooms) {
+var r = rooms[k];
+var pCount = r.players ? Object.keys(r.players).length : 0;
+if (r.isPublic && r.status === "waiting" && pCount < 6) {
+foundCode = k;
+break;
+}
+}
+}
+if (!foundCode) {
+foundCode = "PUB" + Math.floor(100 + Math.random() * 900);
+db.ref("rooms/" + foundCode).set({
+code: foundCode,
+isPublic: true,
+status: "waiting",
+word: "",
+spyUid: ""
+}).then(function() {
+joinRoom(foundCode);
+});
+} else {
+joinRoom(foundCode);
+}
+});
+}
+function joinRoom(code) {
+currentRoomCode = code;
+document.getElementById("roomCodeDisplay").innerText = "Room: " + code;
+var playerRef = db.ref("rooms/" + code + "/players/" + currentUser.uid);
+playerRef.set({
+name: currentUser.name,
+id: currentUser.id,
+uid: currentUser.uid
+}).then(function() {
+playerRef.onDisconnect().remove();
+startVoiceChat(code);
+listenToRoom(code);
+showScreen("screen-room");
+});
+}
+function startVoiceChat(roomID) {
+try {
+if (typeof ZegoUIKitPrebuilt !== "undefined") {
+var kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+ZEGO_APP_ID,
+ZEGO_SERVER_SECRET,
+roomID,
+currentUser.uid,
+currentUser.name
 );
 zegoInstance = ZegoUIKitPrebuilt.create(kitToken);
 zegoInstance.joinRoom({
@@ -280,105 +313,80 @@ console.log("Voice chat note:", e);
 }
 }
 function listenToRoom(code) {
-db.ref("rooms/" + code).on("value", (snapshot) => {
+db.ref("rooms/" + code).on("value", function(snapshot) {
 if (!snapshot.exists()) return;
-const data = snapshot.val();
-const playersObj = data.players || {};
-const playersArr = Object.values(playersObj);
-const list = document.getElementById("roomPlayersList");
+var data = snapshot.val();
+var playersObj = data.players || {};
+var playersArr = Object.values(playersObj);
+var list = document.getElementById("roomPlayersList");
 list.innerHTML = "";
-playersArr.forEach(p => {
-const isMe = p.uid === currentUser.uid;
+playersArr.forEach(function(p) {
+var isMe = p.uid === currentUser.uid;
 list.innerHTML += '' + p.name + (isMe ? " (You)" : "") + ' ' + p.id + '' + (isMe ? '' : '+ Add Friend') + '';
 });
 if (data.status === "playing") {
 document.getElementById("waiting-section").classList.add("hidden");
 document.getElementById("game-section").classList.remove("hidden");
-const amISpy = data.spyUid === currentUser.uid;
+var amISpy = data.spyUid === currentUser.uid;
 document.getElementById("secretWordText").innerText = amISpy ? "🕵️ YOU ARE THE SPY!" : data.word.toUpperCase();
 document.getElementById("roleHintText").innerText = amISpy
 ? "You don't have the secret word! Listen closely and blend in."
 : "Give a subtle 1-word or short clue without saying the secret word!";
-const voteList = document.getElementById("votePlayersList");
+var voteList = document.getElementById("votePlayersList");
 voteList.innerHTML = "";
-playersArr.forEach(p => {
+playersArr.forEach(function(p) {
 voteList.innerHTML += '' + p.name + 'Vote Spy';
 });
 } else {
 document.getElementById("waiting-section").classList.remove("hidden");
 document.getElementById("game-section").classList.add("hidden");
 }
-const chatBox = document.getElementById("chatBox");
+var chatBox = document.getElementById("chatBox");
 chatBox.innerHTML = "";
 if (data.messages) {
-Object.values(data.messages).forEach(m => {
+Object.values(data.messages).forEach(function(m) {
 chatBox.innerHTML += '' + m.sender + ': ' + m.text + '';
 });
 chatBox.scrollTop = chatBox.scrollHeight;
 }
 });
 }
-async function startNewRound() {
-const snap = await db.ref("rooms/" + currentRoomCode + "/players").once("value");
+function doStartGame() {
+db.ref("rooms/" + currentRoomCode + "/players").once("value").then(function(snap) {
 if (!snap.exists()) return;
-const players = Object.values(snap.val());
+var players = Object.values(snap.val());
 if (players.length < 2) return alert("At least 2 players are needed to start! Share your Room Code with a friend.");
-const randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
-const randomSpy = players[Math.floor(Math.random() * players.length)];
-await db.ref("rooms/" + currentRoomCode).update({
+var randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+var randomSpy = players[Math.floor(Math.random() * players.length)];
+db.ref("rooms/" + currentRoomCode).update({
 status: "playing",
 word: randomWord,
 spyUid: randomSpy.uid
 });
+});
 }
-async function castVote(votedUid, votedName, realSpyUid, word) {
-const msg = votedUid === realSpyUid
+function castVote(votedUid, votedName, realSpyUid, word) {
+var msg = votedUid === realSpyUid
 ? "🎉 " + currentUser.name + " caught the Spy! " + votedName + " was the Spy! (Secret Word: " + word + ")"
 : "❌ " + currentUser.name + " voted wrong! " + votedName + " is not the Spy.";
-await db.ref("rooms/" + currentRoomCode + "/messages").push({
+db.ref("rooms/" + currentRoomCode + "/messages").push({
 sender: "SYSTEM",
 text: msg
 });
 }
-async function handleSendChat() {
-const input = document.getElementById("chatInput");
-const text = input.value.trim();
+function doSendChat() {
+var input = document.getElementById("chatInput");
+var text = input.value.trim();
 if (!text) return;
-await db.ref("rooms/" + currentRoomCode + "/messages").push({
+db.ref("rooms/" + currentRoomCode + "/messages").push({
 sender: currentUser.name,
 text: text
 });
 input.value = "";
 }
-function saveFriend(name, id) {
-let friends = JSON.parse(localStorage.getItem("spy_friends") || "[]");
-if (!friends.some(f => f.id === id)) {
-friends.push({ name: name, id: id });
-localStorage.setItem("spy_friends", JSON.stringify(friends));
-alert("✅ " + name + " has been added to your Friends List!");
-renderFriends();
-}
-}
-function renderFriends() {
-const friends = JSON.parse(localStorage.getItem("spy_friends") || "[]");
-const box = document.getElementById("friendsList");
-if (friends.length === 0) {
-box.innerHTML = 'No saved friends yet. Click "+ Add Friend" inside a room!';
-return;
-}
-box.innerHTML = "";
-friends.forEach(f => {
-box.innerHTML += '🟢 ' + f.name + ' (' + f.id + ')New Room';
-});
-}
-function handleCopyInvite() {
-const text = "Join my Secret Spy game room! Room Code: " + currentRoomCode;
-navigator.clipboard?.writeText(text);
-alert("Invite copied to clipboard! Share it with your friends:\n\n" + text);
-}
-async function handleLeaveRoom() {
-if (currentRoomCode) {
-await db.ref("rooms/" + currentRoomCode + "/players/" + currentUser.uid).remove();
+function doLeaveRoom() {
+if (currentRoomCode && db) {
+db.ref("rooms/" + currentRoomCode + "/players/" + currentUser.uid).remove();
 }
 if (zegoInstance) {
 try { zegoInstance.destroy(); } catch (e) {}
